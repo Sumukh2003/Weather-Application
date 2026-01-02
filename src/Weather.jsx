@@ -9,10 +9,24 @@ import windy_icon from "./assets/windy.png";
 import mist_icon from "./assets/mist.png";
 import { useState } from "react";
 import { useRef } from "react";
+import {
+  FaSearch,
+  FaWind,
+  FaTint,
+  FaMapMarkerAlt,
+  FaThermometerHalf,
+} from "react-icons/fa";
 
 const Weather = () => {
   const inputRef = useRef();
-  const [weatherData, setWeatherData] = useState(false);
+  const [weatherData, setWeatherData] = useState({
+    humidity: 0,
+    windSpeed: 0,
+    temperature: 0,
+    location: "Search a city",
+    icon: clear_icon,
+    description: "",
+  });
 
   const allIcons = {
     "01d": clear_icon,
@@ -37,7 +51,7 @@ const Weather = () => {
 
   const search = async (city) => {
     if (city === "") {
-      alert("Enter city name");
+      alert("Please enter a city name");
       return;
     }
     try {
@@ -46,44 +60,133 @@ const Weather = () => {
       }`;
       const response = await fetch(url);
       const data = await response.json();
-      console.log(data);
+
+      if (data.cod === "404") {
+        alert("City not found. Please try again.");
+        return;
+      }
 
       const icon = allIcons[data.weather[0].icon] || clear_icon;
 
       setWeatherData({
         humidity: data.main.humidity,
-        windSpeed: data.wind.speed,
-        temperature: Math.floor(data.main.temp),
+        windSpeed: Math.round(data.wind.speed * 3.6), // Convert m/s to km/h
+        temperature: Math.round(data.main.temp),
         location: data.name,
+        country: data.sys.country,
         icon: icon,
+        description: data.weather[0].description,
+        feelsLike: Math.round(data.main.feels_like),
+        pressure: data.main.pressure,
       });
-    } catch (error) {}
+    } catch (error) {
+      console.error("Error fetching weather data:", error);
+      alert("Failed to fetch weather data. Please check your connection.");
+    }
   };
+
+  const handleKeyPress = (e) => {
+    if (e.key === "Enter") {
+      search(inputRef.current.value);
+    }
+  };
+
   useEffect(() => {
     search("New York");
   }, []);
+
   return (
     <div className="weather">
-      <div className="search-bar">
-        <input ref={inputRef} type="text" placeholder="Enter city name" />
-        <button onClick={() => search(inputRef.current.value)}>Search</button>
+      <div className="weather-header">
+        <FaThermometerHalf className="header-icon" />
+        <div>
+          <h1>Weather Forecast</h1>
+          <p className="subtitle">Real-time weather updates</p>
+        </div>
       </div>
-      <img src={weatherData.icon} alt="image" className="weather-icon" />
-      <p className="temperature">{weatherData.temperature}°C</p>
-      <p className="location">{weatherData.location}</p>
-      <div className="weather-data">
-        <div className="col">
-          <img src={windy_icon} alt="image" className="weather-img" />
-          <div>
-            <p>{weatherData.windSpeed}</p>
-            <p>Wind speed</p>
+
+      <div className="weather-container">
+        <div className="search-section">
+          <div className="search-group">
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Enter city name..."
+              onKeyPress={handleKeyPress}
+              className="city-input"
+            />
+            <button
+              className="search-btn"
+              onClick={() => search(inputRef.current.value)}
+            >
+              <FaSearch className="btn-icon" />
+              <span>Search</span>
+            </button>
+          </div>
+
+          <div className="location-info">
+            <FaMapMarkerAlt className="location-icon" />
+            <span>
+              {weatherData.location}, {weatherData.country}
+            </span>
           </div>
         </div>
-        <div className="col">
-          <img src={humid_icon} alt="image" className="weather-img" />
-          <div>
-            <p>{weatherData.humidity}</p>
-            <p>Humidity</p>
+
+        <div className="weather-display">
+          <div className="current-weather">
+            <img
+              src={weatherData.icon}
+              alt="weather"
+              className="weather-icon"
+            />
+
+            <div className="temperature-section">
+              <div className="temp-main">
+                <span className="temperature">{weatherData.temperature}</span>
+                <span className="temp-unit">°C</span>
+              </div>
+
+              <div className="weather-description">
+                {weatherData.description}
+              </div>
+
+              <div className="feels-like">
+                Feels like {weatherData.feelsLike}°C
+              </div>
+            </div>
+          </div>
+
+          <div className="weather-stats">
+            <div className="stat-card">
+              <div className="stat-header">
+                <FaWind className="stat-icon" />
+                <span>Wind</span>
+              </div>
+              <div className="stat-value">{weatherData.windSpeed} km/h</div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-header">
+                <FaTint className="stat-icon" />
+                <span>Humidity</span>
+              </div>
+              <div className="stat-value">{weatherData.humidity}%</div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-header">
+                <FaThermometerHalf className="stat-icon" />
+                <span>Pressure</span>
+              </div>
+              <div className="stat-value">{weatherData.pressure} hPa</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="weather-footer">
+          <div className="footer-text">
+            <p>Data provided by OpenWeatherMap</p>
+            <p className="update-time">Updated just now</p>
           </div>
         </div>
       </div>
